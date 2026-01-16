@@ -3,33 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>水果箱大賽 - Pencil 相容版</title>
+    <title>水果箱大賽 - 大按鈕優化版</title>
     <style>
         body { 
             text-align: center; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
             background: #fdf5e6; margin: 0; padding: 0; overflow: hidden; 
-            touch-action: none; /* 核心：禁止瀏覽器預設手勢，交由程式處理 */
+            touch-action: none; 
         }
         #game-container {
             width: 100vw; height: 100vh;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
+        /* 加高資訊列並加大字體 */
         .stats { 
             display: flex; justify-content: space-around; align-items: center;
-            width: 98vw; font-size: 16px; margin-bottom: 10px; color: #5d4037; font-weight: bold; min-height: 40px; 
+            width: 98vw; font-size: 22px; margin-bottom: 15px; color: #5d4037; font-weight: bold; min-height: 80px; 
         }
         canvas { 
             background: white; border: 3px solid #8b4513; border-radius: 8px;
-            max-width: 95vw; max-height: 80vh; 
-            touch-action: none; /* 確保畫布不會被捲動 */
+            max-width: 95vw; max-height: 75vh; 
+            touch-action: none;
             display: block;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
-        .btn-group { display: flex; gap: 8px; }
+        .btn-group { display: flex; gap: 15px; }
+        /* 顯著加大按鈕 */
         .ui-btn {
-            color: white; border: none; padding: 8px 16px;
-            border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 14px;
-            touch-action: auto; /* 讓 HTML 按鈕可以被點擊 */
+            color: white; border: none; 
+            padding: 15px 30px; /* 加大填充 */
+            border-radius: 12px; /* 圓角也大一點 */
+            font-weight: bold; cursor: pointer; 
+            font-size: 20px; /* 字體變大 */
+            touch-action: auto;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            transition: transform 0.1s;
+        }
+        .ui-btn:active {
+            transform: scale(0.95); /* 按下去的縮放效果 */
         }
         #pause-trigger { background: #8b4513; }
         #restart-trigger { background: #d32f2f; }
@@ -154,9 +164,11 @@
             ctx.fillText("數字總和等於 10 即可消除", canvas.width/2, 230);
             ctx.fillStyle = "#e67e22"; ctx.font = "bold 32px sans-serif";
             ctx.fillText("最高紀錄: " + highScore, canvas.width/2, 300);
-            ctx.fillStyle = "#43a047"; ctx.fillRect(canvas.width/2 - 100, 360, 200, 60);
-            ctx.fillStyle = "white"; ctx.font = "bold 28px sans-serif";
-            ctx.fillText("開始遊戲", canvas.width/2, 400);
+            
+            // 開始畫面按鈕也加大
+            ctx.fillStyle = "#43a047"; ctx.fillRect(canvas.width/2 - 120, 360, 240, 70);
+            ctx.fillStyle = "white"; ctx.font = "bold 32px sans-serif";
+            ctx.fillText("開始遊戲", canvas.width/2, 407);
         }
 
         function drawGrid() {
@@ -176,7 +188,7 @@
 
         function drawPauseUI() {
             ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = "white"; ctx.font = "bold 48px sans-serif"; ctx.textAlign = "center";
+            ctx.fillStyle = "white"; ctx.font = "bold 60px sans-serif"; ctx.textAlign = "center";
             ctx.fillText("暫停中", canvas.width/2, canvas.height/2);
         }
 
@@ -190,13 +202,15 @@
 
         function drawResultUI() {
             ctx.fillStyle = "rgba(0,0,0,0.8)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = "white"; ctx.fillRect(canvas.width/2 - 160, 100, 320, 280);
-            ctx.fillStyle = "#333"; ctx.font = "bold 32px sans-serif"; ctx.textAlign = "center";
-            ctx.fillText("遊戲結束", canvas.width/2, 160);
-            ctx.font = "24px sans-serif"; ctx.fillText("本次得分: " + score, canvas.width/2, 210);
-            ctx.fillStyle = "#e67e22"; ctx.fillText("最高紀錄: " + highScore, canvas.width/2, 250);
-            ctx.fillStyle = "#43a047"; ctx.fillRect(canvas.width/2 - 80, 290, 160, 50);
-            ctx.fillStyle = "white"; ctx.font = "bold 22px sans-serif"; ctx.fillText("回主選單", canvas.width/2, 323);
+            ctx.fillStyle = "white"; ctx.fillRect(canvas.width/2 - 180, 100, 360, 300);
+            ctx.fillStyle = "#333"; ctx.font = "bold 36px sans-serif"; ctx.textAlign = "center";
+            ctx.fillText("遊戲結束", canvas.width/2, 165);
+            ctx.font = "26px sans-serif"; ctx.fillText("本次得分: " + score, canvas.width/2, 220);
+            ctx.fillStyle = "#e67e22"; ctx.fillText("最高紀錄: " + highScore, canvas.width/2, 265);
+            
+            // 結算畫面按鈕加大
+            ctx.fillStyle = "#43a047"; ctx.fillRect(canvas.width/2 - 90, 310, 180, 60);
+            ctx.fillStyle = "white"; ctx.font = "bold 26px sans-serif"; ctx.fillText("回主選單", canvas.width/2, 350);
         }
 
         function calculateSum() {
@@ -212,10 +226,8 @@
             return sum;
         }
 
-        // --- 重點：改用 Pointer Events 處理座標 ---
         function getPos(e) {
             const rect = canvas.getBoundingClientRect();
-            // PointerEvent 直接就有 clientX/Y，不需要區分觸控或滑鼠
             const scaleX = canvas.width / rect.width;
             const scaleY = canvas.height / rect.height;
             return {
@@ -225,16 +237,14 @@
         }
 
         function handlePointerDown(e) {
-            // 啟用音效
             if (audioCtx.state === 'suspended') audioCtx.resume();
-            
             const pos = getPos(e);
             if (gameState === 'start') {
-                if (pos.x > canvas.width/2 - 100 && pos.x < canvas.width/2 + 100 &&
-                    pos.y > 360 && pos.y < 420) startGame();
+                if (pos.x > canvas.width/2 - 120 && pos.x < canvas.width/2 + 120 &&
+                    pos.y > 360 && pos.y < 430) startGame();
             } else if (gameState === 'gameover') {
-                if (pos.x > canvas.width/2 - 80 && pos.x < canvas.width/2 + 80 &&
-                    pos.y > 290 && pos.y < 340) showStartScreen();
+                if (pos.x > canvas.width/2 - 90 && pos.x < canvas.width/2 + 90 &&
+                    pos.y > 310 && pos.y < 370) showStartScreen();
             } else if (gameState === 'playing') {
                 isDragging = true;
                 startX = pos.x; startY = pos.y;
@@ -250,10 +260,7 @@
         }
 
         function handlePointerUp() {
-            if (!isDragging || gameState !== 'playing') {
-                isDragging = false;
-                return;
-            }
+            if (!isDragging || gameState !== 'playing') { isDragging = false; return; }
             isDragging = false;
             let x1 = Math.min(startX, currentX), x2 = Math.max(startX, currentX);
             let y1 = Math.min(startY, currentY), y2 = Math.max(startY, currentY);
@@ -273,12 +280,10 @@
             draw();
         }
 
-        // 使用 Pointer Events 綁定 (包含滑鼠、觸控、Apple Pencil)
         canvas.addEventListener('pointerdown', handlePointerDown);
         window.addEventListener('pointermove', handlePointerMove);
         window.addEventListener('pointerup', handlePointerUp);
 
-        // HTML 按鈕事件
         pauseBtn.addEventListener('click', (e) => { e.stopPropagation(); togglePause(); });
         restartBtn.addEventListener('click', (e) => { e.stopPropagation(); manualRestart(); });
 
