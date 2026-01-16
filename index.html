@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>水果箱大賽</title>
+    <style>
+        body { 
+            text-align: center; font-family: sans-serif; background: #fdf5e6; 
+            margin: 0; padding: 0; overflow: hidden; touch-action: none; 
+        }
+        #game-container {
+            width: 100vw; height: 100vh;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .stats { font-size: 20px; margin-bottom: 10px; color: #5d4037; font-weight: bold; }
+        canvas { 
+            background: white; border: 3px solid #8b4513; border-radius: 8px;
+            max-width: 95vw; max-height: 80vh; touch-action: none;
+            display: block; /* 確保畫布不是隱藏的 */
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div class="stats">分數: <span id="score">0</span> | 時間: <span id="timer">120</span></div>
+        <canvas id="gameCanvas"></canvas>
+    </div>
+
+    <script>
+        // 錯誤捕捉：如果手機報錯，會彈窗告訴我們
+        window.onerror = function(msg) { alert("錯誤: " + msg); };
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+        const timerEl = document.getElementById('timer');
+        
+        const COLS = 17, ROWS = 10, CELL_SIZE = 50;
+        canvas.width = COLS * CELL_SIZE;
+        canvas.height = ROWS * CELL_SIZE;
+
+        let grid = [], score = 0, timeLeft = 120;
+        let isDragging = false, startX, startY, currentX, currentY;
+        let isGameOver = false, timerInterval;
+        let highScore = localStorage.getItem('fruitBoxHighScore') || 0;
+
+        // 音效
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        const audioCtx = new AudioContext();
+
+        function playSound(type) {
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                const now = audioCtx.currentTime;
+                if (type === 'success') {
+                    osc.frequency.setValueAtTime(600, now);
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                    osc.start(); osc.stop(now + 0.2);
+                }
+            } catch(e) {}
+        }
+
+        function initGame() {
+            score = 0; timeLeft = 120; isGameOver = false;
+            scoreEl.innerText = score;
+            for (let r = 0; r < ROWS; r++) {
+                grid[r] = [];
+                for (let c = 0; c < COLS; c++) {
+                    grid[r][c] = { val: Math.floor(Math.random() * 9) + 1, cleared: false };
+                }
+            }
+            if(timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                if(timeLeft > 0) { timeLeft--; timerEl.innerText = timeLeft; }
+                else if (!isGameOver) endGame();
+                draw();
+            }, 1000);
+        }
+
+        function endGame() {
+            isGameOver = true; clearInterval(timerInterval);
+            if (score > highScore) { highScore = score; localStorage.setItem('fruitBoxHighScore', highScore); }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 畫蘋果
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    if (!grid[r][c].cleared) {
+                        ctx.fillStyle = "#ff4d4d"; ctx.beginPath();
+                        ctx.arc(c * CELL_SIZE + 25, r * CELL_SIZE + 25, 18, 0, Math.PI * 2); ctx.fill();
+                        ctx.fillStyle = "white"; ctx.font = "bold 20px Arial"; ctx.textAlign = "center";
+                        ctx.fillText(grid[r][c].val, c * CELL_SIZE + 25, r * CELL_SIZE + 32);
+                    }
+                }
+            }
+
+            // 畫選取框
+            if (isDragging && !isGameOver) {
+                let sum = calculateSum();
+                ctx.strokeStyle = (sum === 10) ? "#4caf50" : "#2196f3";
+                ctx.lineWidth = 3; 
+                ctx.strokeRect(startX, startY, currentX - startX, currentY - startY);
+                ctx.fillStyle = (sum === 10) ? "rgba(76,175,80,0.2)" : "rgba(33,150,243,0.1)";
+                ctx.fillRect(startX, startY, currentX - startX, currentY - startY);
+            }
+
+            if (isGameOver) drawResult();
+        }
+
+        function calculateSum() {
+            let x1 = Math.min(startX, currentX), x2 = Math.max(startX, currentX);
+            let y1 = Math.min(startY, currentY), y2 = Math.max(startY, currentY);
+            let sum = 0;
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    let cx = c * CELL_SIZE + 25, cy = r * CELL_SIZE + 25;
+                    if (!grid[r][c].cleared && cx > x1 && cx < x2 && cy > y1 && cy < y2) sum += grid[r][c].val;
+                }
+            }
+            return sum;
+        }
+
+        function drawResult() {
+            ctx.fillStyle = "rgba(0,0,0,0.8)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "white";
+            // 使用基本矩形代替 roundRect 避免報錯
+            ctx.fillRect(canvas.width/2-150, 80, 300, 240); 
+            ctx.fillStyle = "#333"; ctx.font = "bold 30px sans-serif";
+            ctx.fillText("遊戲結束", canvas.width/2, 130);
+            ctx.font = "20px sans-serif";
+            ctx.fillText("得分: " + score, canvas.width/2, 180);
+            ctx.fillStyle = "#e67e22";
+            ctx.fillText("歷史最高: " + highScore, canvas.width/2, 220);
+            ctx.fillStyle = "#43a047";
+            ctx.fillRect(canvas.width/2-70, 250, 140, 45);
+            ctx.fillStyle = "white";
+            ctx.fillText("再玩一次", canvas.width/2, 281);
+        }
+
+        function getPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
+        }
+
+        function start(e) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const pos = getPos(e);
+            if (isGameOver) {
+                if (pos.x > canvas.width/2-70 && pos.x < canvas.width/2+70 && pos.y > 250 && pos.y < 295) initGame();
+                return;
+            }
+            isDragging = true; startX = pos.x; startY = pos.y; currentX = pos.x; currentY = pos.y;
+        }
+
+        function move(e) {
+            if (!isDragging || isGameOver) return;
+            const pos = getPos(e);
+            currentX = pos.x; currentY = pos.y; draw();
+        }
+
+        function end() {
+            if (!isDragging || isGameOver) return;
+            isDragging = false;
+            let x1 = Math.min(startX, currentX), x2 = Math.max(startX, currentX);
+            let y1 = Math.min(startY, currentY), y2 = Math.max(startY, currentY);
+            let selected = [], sum = 0;
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    let cx = c * CELL_SIZE + 25, cy = r * CELL_SIZE + 25;
+                    if (!grid[r][c].cleared && cx > x1 && cx < x2 && cy > y1 && cy < y2) {
+                        selected.push({r, c}); sum += grid[r][c].val;
+                    }
+                }
+            }
+            if (sum === 10) {
+                selected.forEach(p => grid[p.r][p.c].cleared = true);
+                score += selected.length; scoreEl.innerText = score; playSound('success');
+            }
+            draw();
+        }
+
+        // 事件監聽
+        canvas.addEventListener('mousedown', start);
+        window.addEventListener('mousemove', move);
+        window.addEventListener('mouseup', end);
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); start(e); }, {passive: false});
+        window.addEventListener('touchmove', (e) => { e.preventDefault(); move(e); }, {passive: false});
+        window.addEventListener('touchend', end);
+
+        initGame(); draw();
+    </script>
+</body>
+</html>
